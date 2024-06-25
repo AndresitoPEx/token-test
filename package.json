@@ -1,0 +1,15 @@
+{
+  "type": "module",
+  "dependencies": {
+    "@zohocrm/nodejs-sdk-6.0": "^2.0.0",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "form-data": "^4.0.0",
+    "got": "^14.3.0",
+    "moment-timezone": "^0.5.45",
+    "mysql": "^2.18.1",
+    "node-cron": "^3.0.3",
+    "tunnel": "^0.0.6",
+    "winston": "^3.13.0"
+  }
+}
