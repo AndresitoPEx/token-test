@@ -1,8 +1,8 @@
 /node_modules
-/resources
+
 .env
 .log
 .exe
 /ngrok.exe
 node.log
-resources/
+
