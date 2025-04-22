@@ -3,23 +3,16 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
-// Determinar si estamos en producción (Render)
-const isProd = process.env.NODE_ENV === 'production';
-
-// Crear el builder base
-const builder = new ZOHOCRMSDK.DBBuilder()
+// Configuración para MySQL en Aiven con SSL
+const dbConfig = new ZOHOCRMSDK.DBBuilder()
   .host(process.env.DB_HOST)
   .databaseName(process.env.DB_NAME || "zohooauth")
   .userName(process.env.DB_USER)
   .password(process.env.DB_PASSWORD)
   .portNumber(process.env.DB_PORT || 3306)
-  .tableName("oauthtoken");
-
-// Añadir SSL solo en producción
-if (isProd) {
-  builder.sslMode(true);
-}
-
-const dbConfig = builder.build();
+  .tableName("oauthtoken")
+  // Configuración SSL para Aiven
+  .sslMode(true)
+  .build();
 
 export default dbConfig;
