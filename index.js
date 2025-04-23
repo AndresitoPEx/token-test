@@ -267,7 +267,7 @@ app.post("/validate-contact", async (req, res) => {
               res.json({
                 status: `Hola ${firstName}, por seguridad necesitamos validar tu identidad.`,
                 message:
-                  "Por favor, ingresa tu fecha de nacimiento en formato YYYY-MM-DD",
+                  "Validación por fecha de nacimiento...",
                 requireBirthDate: true,
                 access_granted: false, // Aún no, hasta validar fecha
                 contactName: fullName,
