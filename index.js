@@ -129,12 +129,42 @@ async function getContactDeals(contactFullName) {
   }
 }
 
-// Función para validar la fecha de nacimiento de un contacto
-async function validateBirthDate(dni, birthDate) {
+// Función para convertir fecha de formato DD-MM-YYYY a YYYY-MM-DD
+function convertToISOFormat(dateString) {
+  // Verifica el formato DD-MM-YYYY
+  const dateRegex = /^(\d{2})-(\d{2})-(\d{4})$/;
+  const match = dateString.match(dateRegex);
+
+  if (!match) {
+    return null; // Formato inválido
+  }
+
+  const day = match[1];
+  const month = match[2];
+  const year = match[3];
+
+  // Retorna en formato YYYY-MM-DD
+  return `${year}-${month}-${day}`;
+}
+
+// Función actualizada para validar la fecha de nacimiento de un contacto
+async function validateBirthDate(dni, userInputBirthDate) {
   try {
     console.log(
-      `Validando fecha de nacimiento para DNI: ${dni}, Fecha: ${birthDate}`
+      `Validando fecha de nacimiento para DNI: ${dni}, Fecha: ${userInputBirthDate}`
     );
+
+    // Convertir la fecha de entrada (DD-MM-YYYY) a formato ISO (YYYY-MM-DD)
+    const isoFormatBirthDate = convertToISOFormat(userInputBirthDate);
+
+    if (!isoFormatBirthDate) {
+      console.log("❌ Formato de fecha inválido");
+      return {
+        isValid: false,
+        message:
+          "Formato de fecha inválido. Por favor, usa el formato DD-MM-AAAA (por ejemplo: 15-06-1990)",
+      };
+    }
 
     const moduleAPIName = "Contacts";
     const recordOperations = new ZOHOCRMSDK.Record.RecordOperations(
@@ -180,7 +210,7 @@ async function validateBirthDate(dni, birthDate) {
           const formattedStoredDate = storedDate.toISOString().split("T")[0];
 
           // Comparar fechas en formato YYYY-MM-DD
-          if (formattedStoredDate === birthDate) {
+          if (formattedStoredDate === isoFormatBirthDate) {
             console.log("✅ Fecha de nacimiento validada correctamente");
             return {
               isValid: true,
@@ -264,12 +294,12 @@ app.post("/validate-contact", async (req, res) => {
 
             // Si tiene 2 o más direcciones, solicitar fecha de nacimiento
             if (addresses.length >= 2) {
+              // Cuando solicitamos la fecha de nacimiento, actualizar el mensaje:
               res.json({
                 status: `Hola ${firstName}, por seguridad necesitamos validar tu identidad.`,
-                message:
-                  "Validación por fecha de nacimiento...",
+                message: "Validación por fecha de nacimiento:",
                 requireBirthDate: true,
-                access_granted: false, // Aún no, hasta validar fecha
+                access_granted: false,
                 contactName: fullName,
                 dni: dni,
               });
@@ -376,7 +406,7 @@ app.post("/validate-birthdate", async (req, res) => {
         access_granted: false,
         requireBirthDate: true, // Seguir solicitando la fecha de nacimiento
         message:
-          "Por favor, ingresa tu fecha de nacimiento correcta en formato YYYY-MM-DD",
+          "Por favor, ingresa tu fecha de nacimiento correcta en formato DD-MM-AAAA (Por ejemplo: 15-06-1990)",
       });
     }
   } catch (error) {
@@ -436,7 +466,7 @@ app.post("/validate-contact-sync", async (req, res) => {
               res.json({
                 status: `Hola ${firstName}, por seguridad necesitamos validar tu identidad.`,
                 message:
-                  "Por favor, ingresa tu fecha de nacimiento en formato YYYY-MM-DD",
+                  "Por favor, ingresa tu fecha de nacimiento en formato DD-MM-AAAA (Por ejemplo: 15-06-1990)",
                 requireBirthDate: true,
                 access_granted: false,
                 contactName: fullName,
@@ -455,7 +485,7 @@ app.post("/validate-contact-sync", async (req, res) => {
                   access_granted: false,
                   requireBirthDate: true,
                   message:
-                    "Por favor, ingresa tu fecha de nacimiento correcta en formato YYYY-MM-DD",
+                    "Por favor, ingresa tu fecha de nacimiento correcta en formato DD-MM-AAAA (Por ejemplo: 15-06-1990)",
                 });
                 return;
               }
