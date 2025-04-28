@@ -655,7 +655,7 @@ app.post("/validate-phone", async (req, res) => {
     if (validation.exists) {
       // El número existe, mostramos mensaje de "Gracias y continue"
       res.json({
-        status: "Gracias, por favor continúe",
+        status: "Gracias, se está generando un ticket para su solicitud",
         phoneValidated: true,
         access_granted: true,
         contactName: validation.contact?.fullName || ""
