@@ -250,6 +250,103 @@ async function validateBirthDate(dni, userInputBirthDate) {
   }
 }
 
+// Función para validar si un número de teléfono existe en el CRM
+async function validatePhoneNumber(phoneNumber) {
+  try {
+    console.log(`Validando número de teléfono: ${phoneNumber}`);
+
+    // Eliminar espacios, guiones u otros caracteres no numéricos para la búsqueda
+    const cleanPhoneNumber = phoneNumber.replace(/\D/g, '');
+    
+    if (!cleanPhoneNumber || cleanPhoneNumber.length < 5) {
+      return {
+        exists: false,
+        message: "El número de teléfono no es válido",
+        contact: null
+      };
+    }
+
+    const moduleAPIName = "Contacts";
+    const recordOperations = new ZOHOCRMSDK.Record.RecordOperations(moduleAPIName);
+
+    // Crear parámetros para la búsqueda (buscamos en Phone O Mobile)
+    const paramInstance = new ZOHOCRMSDK.ParameterMap();
+    await paramInstance.add(
+      ZOHOCRMSDK.Record.SearchRecordsParam.CRITERIA,
+      `((Phone:equals:${cleanPhoneNumber})OR(Mobile:equals:${cleanPhoneNumber}))`
+    );
+
+    const headerInstance = new ZOHOCRMSDK.HeaderMap();
+
+    const response = await recordOperations.searchRecords(
+      paramInstance,
+      headerInstance
+    );
+
+    if (response.getStatusCode() === 200) {
+      const responseObject = response.getObject();
+
+      if (responseObject instanceof ZOHOCRMSDK.Record.ResponseWrapper) {
+        const records = responseObject.getData();
+
+        if (records && records.length > 0) {
+          const contact = records[0];
+          const fullName = contact.getKeyValue("Full_Name") || "Cliente";
+          const firstName = contact.getKeyValue("First_Name") || "Cliente";
+          const dni = contact.getKeyValue("N_mero_de_Documento") || "";
+
+          console.log(`✅ Número de teléfono encontrado para: ${fullName}`);
+          return {
+            exists: true,
+            message: `Número de teléfono validado para ${firstName}`,
+            contact: {
+              fullName: fullName,
+              firstName: firstName,
+              dni: dni,
+              id: contact.getId()
+            }
+          };
+        } else {
+          console.log("❌ Número de teléfono no encontrado en el sistema");
+          return {
+            exists: false,
+            message: "El número de teléfono no está registrado en nuestro sistema",
+            contact: null
+          };
+        }
+      } else if (responseObject instanceof ZOHOCRMSDK.Record.APIException) {
+        const errorMsg = `Error al buscar el número de teléfono: ${responseObject.getMessage().getValue()}`;
+        console.error(`❌ ${errorMsg}`);
+        return {
+          exists: false,
+          message: errorMsg,
+          contact: null
+        };
+      }
+    } else if (response.getStatusCode() === 204) {
+      console.log("❌ No se encontraron contactos con ese número de teléfono");
+      return {
+        exists: false,
+        message: "El número de teléfono no está registrado en nuestro sistema",
+        contact: null
+      };
+    }
+
+    return {
+      exists: false,
+      message: "Error al validar el número de teléfono",
+      contact: null
+    };
+  } catch (error) {
+    console.error(`❌ Error al validar número de teléfono: ${error}`);
+    return {
+      exists: false,
+      message: "Error interno al validar el número de teléfono",
+      contact: null
+    };
+  }
+}
+
 // Initialize the SDK
 Initializer.initialize();
 
@@ -540,6 +637,47 @@ app.post("/validate-contact-sync", async (req, res) => {
       .json({ status: "Error interno del servidor", access_granted: false });
   }
 });
+
+// Endpoint para validar un número de teléfono
+app.post("/validate-phone", async (req, res) => {
+  try {
+    const phoneNumber = req.body.phoneNumber;
+    
+    if (!phoneNumber) {
+      return res.status(400).json({
+        status: "Error: No se proporcionó un número de teléfono",
+        valid: false
+      });
+    }
+    
+    const validation = await validatePhoneNumber(phoneNumber);
+    
+    if (validation.exists) {
+      // El número existe, mostramos mensaje de "Gracias y continue"
+      res.json({
+        status: "Gracias, por favor continúe",
+        phoneValidated: true,
+        access_granted: true,
+        contactName: validation.contact?.fullName || ""
+      });
+    } else {
+      // El número no existe, preguntamos si desea registrarlo
+      res.json({
+        status: "Verificamos que este teléfono no está en nuestra base de datos",
+        phoneValidated: false,
+        askForRegistration: true,
+        message: "¿Desea registrarlo como contacto?"
+      });
+    }
+  } catch (error) {
+    console.error(`Error interno del servidor al validar teléfono: ${error}`);
+    res.status(500).json({
+      status: "Error interno del servidor",
+      phoneValidated: false
+    });
+  }
+});
+  
 
 app.listen(port, () => {
   console.log(`Servidor corriendo en el puerto ${port}`);
